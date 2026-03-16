@@ -49,7 +49,7 @@ Game Glitch Investigator is a number guessing game built with Streamlit. The pla
 
 ## 📸 Demo
 
-- [ ] [Insert a screenshot of your fixed, winning game here]
+![Fixed Winning Game!](pictures/win.png)
 
 ## 🚀 Stretch Features
 
