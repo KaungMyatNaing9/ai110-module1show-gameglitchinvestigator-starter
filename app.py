@@ -15,6 +15,7 @@ difficulty = st.sidebar.selectbox(
     index=1,
 )
 #FIXME: The attempt limit and difficulty should be based on get_range_for_difficulty
+#Fix: Fixed the attempt limit and range based on the difficulty level. For easy mode, the range is 1 to 20 and attempts allowed is 6, for normal mode, the range is 1 to 100 and attempts allowed is 8, for hard mode, the range is 1 to 50 and attempts allowed is 5. Claude Code used
 attempt_limit_map = {
     "Easy": 6,
     "Normal": 8,
@@ -27,6 +28,7 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
+#Fix to start new game and new secret if user switch between difficulties. Claude Code used
 if "difficulty" not in st.session_state:
     st.session_state.difficulty = difficulty
 
@@ -34,6 +36,7 @@ if st.session_state.difficulty != difficulty:
     st.session_state.difficulty = difficulty
     st.session_state.secret = random.randint(low, high)
     st.session_state.attempts = 0
+    st.session_state.score = 0
     st.session_state.status = "playing"
     st.session_state.history = []
 
@@ -70,8 +73,10 @@ with col2:
 with col3:
     show_hint = st.checkbox("Show hint", value=True)
 #FIXME: The new game button is not working, the new game. doesnt start
+#Fix: Now the new game button works, Claude Code used
 if new_game:
     st.session_state.attempts = 0
+    st.session_state.score = 0
     st.session_state.secret = random.randint(low, high)
     st.session_state.status = "playing"
     st.session_state.history = []
@@ -123,6 +128,7 @@ if submit:
                     f"Score: {st.session_state.score}"
                 )
 
+#Fix:Fixed the attempt and debug info use claude code
 info_placeholder.info(
     f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
