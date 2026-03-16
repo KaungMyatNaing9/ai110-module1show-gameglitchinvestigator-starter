@@ -55,7 +55,7 @@ Game Glitch Investigator is a number guessing game built with Streamlit. The pla
 
 ### Enhanced Game UI
 
-![Enhanced Game UI](pictures/Screenshot%202026-03-15%20at%208.47.51%20PM.png)
+![Enhanced Game UI](pictures/challenge4.png)
 
 The following UI enhancements were added on top of the core game logic:
 
