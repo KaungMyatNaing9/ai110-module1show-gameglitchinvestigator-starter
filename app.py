@@ -1,6 +1,6 @@
 import random
 import streamlit as st
-from logic_utils import get_range_for_difficulty, parse_guess, check_guess, update_score
+from logic_utils import get_range_for_difficulty, parse_guess, check_guess, update_score, get_temperature
 
 st.set_page_config(page_title="Glitchy Guesser", page_icon="🎮")
 
@@ -58,6 +58,7 @@ if "history" not in st.session_state:
 st.subheader("Make a guess")
 
 info_placeholder = st.empty()
+progress_placeholder = st.empty()
 debug_placeholder = st.empty()
 
 raw_guess = st.text_input(
@@ -72,6 +73,7 @@ with col2:
     new_game = st.button("New Game 🔁")
 with col3:
     show_hint = st.checkbox("Show hint", value=True)
+
 #FIXME: The new game button is not working, the new game. doesnt start
 #Fix: Now the new game button works, Claude Code used
 if new_game:
@@ -96,38 +98,54 @@ if submit:
     ok, guess_int, err = parse_guess(raw_guess)
 
     if not ok:
-        st.session_state.history.append(raw_guess)
-        st.error(err)
+        st.error(f"⚠️ {err}")
     else:
-        st.session_state.history.append(guess_int)
-
         outcome, message = check_guess(guess_int, st.session_state.secret)
+        temp = get_temperature(guess_int, st.session_state.secret, low, high)
+
+        # Store structured guess record
+        st.session_state.history.append({
+            "attempt": st.session_state.attempts,
+            "guess": guess_int,
+            "result": outcome,
+            "temperature": temp,
+        })
 
         if show_hint:
-            st.warning(message)
+            if outcome == "Too High":
+                st.error(f"{message}  —  {temp}")
+            elif outcome == "Too Low":
+                st.info(f"{message}  —  {temp}")
 
         if outcome == "Win":
             st.session_state.score = update_score(outcome, st.session_state.attempts, attempt_limit)
             st.balloons()
             st.session_state.status = "won"
             st.success(
-                f"You won! The secret was {st.session_state.secret}. "
-                f"Final score: {st.session_state.score}"
+                f"🎉 You won! The secret was **{st.session_state.secret}**. "
+                f"Final score: **{st.session_state.score} / 100**"
             )
         else:
             if st.session_state.attempts >= attempt_limit:
                 st.session_state.score = update_score(outcome, st.session_state.attempts, attempt_limit)
                 st.session_state.status = "lost"
                 st.error(
-                    f"Out of attempts! "
-                    f"The secret was {st.session_state.secret}. "
-                    f"Score: {st.session_state.score}"
+                    f"💀 Out of attempts! "
+                    f"The secret was **{st.session_state.secret}**. "
+                    f"Score: **{st.session_state.score} / 100**"
                 )
 
 #Fix:Fixed the attempt and debug info use claude code
+attempts_left = attempt_limit - st.session_state.attempts
 info_placeholder.info(
-    f"Guess a number between {low} and {high}. "
-    f"Attempts left: {attempt_limit - st.session_state.attempts}"
+    f"Guess a number between **{low}** and **{high}**.  |  "
+    f"Attempts left: **{attempts_left}**"
+)
+
+# Attempts remaining progress bar
+progress_placeholder.progress(
+    max(attempts_left / attempt_limit, 0),
+    text=f"{'🟢' * attempts_left}{'⬛' * (attempt_limit - attempts_left)}"
 )
 
 with debug_placeholder.expander("Developer Debug Info"):
@@ -136,6 +154,23 @@ with debug_placeholder.expander("Developer Debug Info"):
     st.write("Score:", st.session_state.score)
     st.write("Difficulty:", difficulty)
     st.write("History:", st.session_state.history)
+
+# Session history summary table
+if st.session_state.history:
+    st.divider()
+    st.subheader("📋 Guess History")
+    rows = []
+    for entry in st.session_state.history:
+        result_icon = "✅ Win" if entry["result"] == "Win" else (
+            "🔴 Too High" if entry["result"] == "Too High" else "🔵 Too Low"
+        )
+        rows.append({
+            "#": entry["attempt"],
+            "Guess": entry["guess"],
+            "Result": result_icon,
+            "Temperature": entry["temperature"],
+        })
+    st.dataframe(rows, use_container_width=True, hide_index=True)
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")

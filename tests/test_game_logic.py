@@ -1,5 +1,70 @@
 import pytest
-from logic_utils import check_guess, get_range_for_difficulty, parse_guess, update_score
+from logic_utils import check_guess, get_range_for_difficulty, parse_guess, update_score, get_temperature
+
+# ---------------------------------------------------------------------------
+# get_temperature — range 1-100 used for most tests (range = 99)
+# ---------------------------------------------------------------------------
+
+class TestGetTemperature:
+    # Exact match
+    def test_exact_returns_exact(self):
+        assert get_temperature(50, 50, 1, 100) == "🎯 Exact!"
+
+    def test_exact_at_boundary_low(self):
+        assert get_temperature(1, 1, 1, 100) == "🎯 Exact!"
+
+    def test_exact_at_boundary_high(self):
+        assert get_temperature(100, 100, 1, 100) == "🎯 Exact!"
+
+    # Scorching — distance <= 10% of range (range=100 → ≤10 away)
+    def test_scorching_very_close(self):
+        # distance 5 / range 100 = 5% → Scorching
+        assert get_temperature(55, 50, 1, 101) == "🔥 Scorching"
+
+    def test_scorching_boundary(self):
+        # distance 10 / range 100 = 10% → Scorching (boundary inclusive)
+        assert get_temperature(60, 50, 1, 101) == "🔥 Scorching"
+
+    # Hot — distance <= 20% of range
+    def test_hot(self):
+        # distance 15 / range 100 = 15% → Hot
+        assert get_temperature(65, 50, 1, 101) == "🌶️ Hot"
+
+    # Warm — distance <= 35% of range
+    def test_warm(self):
+        # distance 25 / range 100 = 25% → Warm
+        assert get_temperature(75, 50, 1, 101) == "🌤️ Warm"
+
+    # Cold — distance <= 50% of range
+    def test_cold(self):
+        # distance 40 / range 100 = 40% → Cold
+        assert get_temperature(90, 50, 1, 101) == "❄️ Cold"
+
+    # Freezing — distance > 50% of range
+    def test_freezing(self):
+        # distance 60 / range 100 = 60% → Freezing
+        assert get_temperature(10, 70, 1, 101) == "🧊 Freezing"
+
+    # Works symmetrically — above and below secret same label
+    def test_symmetric_above_and_below(self):
+        above = get_temperature(60, 50, 1, 101)
+        below = get_temperature(40, 50, 1, 101)
+        assert above == below
+
+    # Easy difficulty range (1-20, range=19)
+    def test_easy_scorching(self):
+        # distance 1 / range 19 ≈ 5% → Scorching
+        assert get_temperature(10, 9, 1, 20) == "🔥 Scorching"
+
+    def test_easy_freezing(self):
+        # distance 18 / range 19 ≈ 95% → Freezing
+        assert get_temperature(1, 19, 1, 20) == "🧊 Freezing"
+
+    # Hard difficulty range (1-50, range=49)
+    def test_hard_warm(self):
+        # distance 12 / range 49 ≈ 24% → Warm
+        assert get_temperature(37, 25, 1, 50) == "🌤️ Warm"
+
 
 # ---------------------------------------------------------------------------
 # check_guess

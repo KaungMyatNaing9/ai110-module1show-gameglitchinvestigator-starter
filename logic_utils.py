@@ -31,7 +31,7 @@ def parse_guess(raw: str):
 
     return True, value, None
 
-
+#Fix: The hints were reversed. The lower and upper are reversed. Claude Code used
 def check_guess(guess, secret):
     """
     Compare guess to secret and return (outcome, message).
@@ -54,7 +54,28 @@ def check_guess(guess, secret):
             return "Too High", "📉 Go LOWER!"
         return "Too Low", "📈 Go HIGHER!"
 
+def get_temperature(guess: int, secret: int, low: int, high: int) -> str:
+    """Return a Hot/Cold label based on how close guess is to secret.
 
+    Distance is measured as a fraction of the total game range.
+    Returns an emoji + label string for display purposes.
+    """
+    game_range = high - low
+    if game_range == 0 or guess == secret:
+        return "🎯 Exact!"
+    ratio = abs(guess - secret) / game_range
+    if ratio <= 0.10:
+        return "🔥 Scorching"
+    if ratio <= 0.20:
+        return "🌶️ Hot"
+    if ratio <= 0.35:
+        return "🌤️ Warm"
+    if ratio <= 0.50:
+        return "❄️ Cold"
+    return "🧊 Freezing"
+
+
+#Fix: The score calculation was changed into new calculation way to make it better, Claude Code used
 def update_score(outcome: str, attempt_number: int, attempt_limit: int) -> int:
     """Calculate the final score for a completed game.
 
