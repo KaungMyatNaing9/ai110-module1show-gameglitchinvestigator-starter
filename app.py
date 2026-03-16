@@ -106,13 +106,8 @@ if submit:
         if show_hint:
             st.warning(message)
 
-        st.session_state.score = update_score(
-            current_score=st.session_state.score,
-            outcome=outcome,
-            attempt_number=st.session_state.attempts,
-        )
-
         if outcome == "Win":
+            st.session_state.score = update_score(outcome, st.session_state.attempts, attempt_limit)
             st.balloons()
             st.session_state.status = "won"
             st.success(
@@ -121,6 +116,7 @@ if submit:
             )
         else:
             if st.session_state.attempts >= attempt_limit:
+                st.session_state.score = update_score(outcome, st.session_state.attempts, attempt_limit)
                 st.session_state.status = "lost"
                 st.error(
                     f"Out of attempts! "

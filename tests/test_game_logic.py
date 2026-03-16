@@ -208,62 +208,86 @@ class TestParseGuess:
 # ---------------------------------------------------------------------------
 
 class TestUpdateScore:
-    # --- Win: points = max(100 - 10*(attempt_number - 1), 10), attempt is 1-indexed ---
-    def test_win_attempt_1_scores_100(self):
-        # First guess correct: 100 - 10*(1-1) = 100
-        assert update_score(0, "Win", 1) == 100
+    """
+    Scoring: 100 points per match, deducted equally per attempt used.
+    Deduction = 100 / attempt_limit per attempt.
+    Loss always returns 0. attempt_number is 1-indexed.
+    """
 
-    def test_win_attempt_2_scores_90(self):
-        # 100 - 10*(2-1) = 90
-        assert update_score(0, "Win", 2) == 90
+    # --- Easy (limit=6): deduction = 100/6 ≈ 16.67 per attempt ---
+    def test_easy_win_attempt_1(self):
+        # 100 - 0 deductions = 100
+        assert update_score("Win", 1, 6) == 100
 
-    def test_win_attempt_10_scores_10(self):
-        # 100 - 10*(10-1) = 10
-        assert update_score(0, "Win", 10) == 10
+    def test_easy_win_attempt_2(self):
+        # 100 - 1*(100/6) = 83.33 → rounds to 83
+        assert update_score("Win", 2, 6) == 83
 
-    def test_win_minimum_10_points(self):
-        # attempt 11+ → floored at 10
-        assert update_score(0, "Win", 11) == 10
-        assert update_score(0, "Win", 100) == 10
+    def test_easy_win_attempt_3(self):
+        # 100 - 2*(100/6) = 66.67 → rounds to 67
+        assert update_score("Win", 3, 6) == 67
 
-    def test_win_adds_to_existing_score(self):
-        # 50 + 100 = 150
-        assert update_score(50, "Win", 1) == 150
+    def test_easy_win_attempt_6(self):
+        # 100 - 5*(100/6) = 16.67 → rounds to 17
+        assert update_score("Win", 6, 6) == 17
 
-    # --- Too High: always -10, attempt number does not matter ---
-    def test_too_high_deducts_ten(self):
-        assert update_score(100, "Too High", 1) == 90
-        assert update_score(100, "Too High", 2) == 90
-        assert update_score(100, "Too High", 7) == 90
+    def test_easy_loss(self):
+        assert update_score("Too Low", 6, 6) == 0
+        assert update_score("Too High", 6, 6) == 0
 
-    def test_too_high_same_penalty_regardless_of_attempt(self):
-        # Every attempt deducts the same amount
-        results = {update_score(100, "Too High", a) for a in range(1, 10)}
-        assert results == {90}
+    # --- Normal (limit=8): deduction = 100/8 = 12.5 per attempt ---
+    def test_normal_win_attempt_1(self):
+        assert update_score("Win", 1, 8) == 100
 
-    def test_too_high_score_can_go_negative(self):
-        assert update_score(5, "Too High", 1) == -5
+    def test_normal_win_attempt_2(self):
+        # 100 - 1*12.5 = 87.5 → rounds to 88
+        assert update_score("Win", 2, 8) == 88
 
-    # --- Too Low: always -10, same as Too High ---
-    def test_too_low_deducts_ten(self):
-        assert update_score(100, "Too Low", 1) == 90
-        assert update_score(100, "Too Low", 3) == 90
-        assert update_score(100, "Too Low", 7) == 90
+    def test_normal_win_attempt_8(self):
+        # 100 - 7*12.5 = 12.5 → rounds to 12 or 13
+        result = update_score("Win", 8, 8)
+        assert result == round(100 - 7 * (100 / 8))
 
-    def test_too_low_score_can_go_negative(self):
-        assert update_score(5, "Too Low", 1) == -5
+    def test_normal_loss(self):
+        assert update_score("Too Low", 8, 8) == 0
 
-    # --- Too High and Too Low must be symmetric ---
-    def test_too_high_and_too_low_same_penalty(self):
-        for attempt in range(1, 9):
-            assert update_score(100, "Too High", attempt) == update_score(100, "Too Low", attempt)
+    # --- Hard (limit=5): deduction = 100/5 = 20 per attempt ---
+    def test_hard_win_attempt_1(self):
+        assert update_score("Win", 1, 5) == 100
 
-    # --- Unknown outcome: score unchanged ---
-    def test_unknown_outcome_unchanged(self):
-        assert update_score(42, "SomeOtherOutcome", 3) == 42
+    def test_hard_win_attempt_2(self):
+        # 100 - 1*20 = 80
+        assert update_score("Win", 2, 5) == 80
 
-    def test_unknown_outcome_zero_score(self):
-        assert update_score(0, "Bogus", 1) == 0
+    def test_hard_win_attempt_3(self):
+        # 100 - 2*20 = 60
+        assert update_score("Win", 3, 5) == 60
+
+    def test_hard_win_attempt_5(self):
+        # 100 - 4*20 = 20
+        assert update_score("Win", 5, 5) == 20
+
+    def test_hard_loss(self):
+        assert update_score("Too High", 5, 5) == 0
+
+    # --- General rules ---
+    def test_first_attempt_always_100_regardless_of_difficulty(self):
+        for limit in (5, 6, 8):
+            assert update_score("Win", 1, limit) == 100
+
+    def test_score_decreases_with_more_attempts(self):
+        for limit in (5, 6, 8):
+            scores = [update_score("Win", a, limit) for a in range(1, limit + 1)]
+            assert scores == sorted(scores, reverse=True), f"Scores not decreasing for limit={limit}"
+
+    def test_score_never_goes_negative(self):
+        for limit in (5, 6, 8):
+            for attempt in range(1, limit + 1):
+                assert update_score("Win", attempt, limit) >= 0
+
+    def test_loss_outcomes_all_return_zero(self):
+        for outcome in ("Too High", "Too Low", "Bogus"):
+            assert update_score(outcome, 3, 6) == 0
 
 
 # ---------------------------------------------------------------------------
@@ -308,20 +332,19 @@ class TestDifficultyAndAttempts:
         assert ok
         outcome, msg = check_guess(guess, secret)
         assert outcome == "Win"
-        score = update_score(0, outcome, 1)
-        # attempt_number=1 → 100 - 10*(1-1) = 100
+        limit = ATTEMPT_LIMIT["Normal"]
+        score = update_score(outcome, 1, limit)
         assert score == 100
 
     def test_game_reaches_attempt_limit_easy(self):
-        """Simulate exhausting all Easy attempts with wrong guesses."""
+        """Simulate exhausting all Easy attempts with wrong guesses → score is 0."""
         limit = ATTEMPT_LIMIT["Easy"]
-        score = 0
+        final_outcome = None
         for attempt in range(1, limit + 1):
-            outcome, _ = check_guess(1, 100)   # always "Too Low"
-            score = update_score(score, outcome, attempt)
-        # All wrong → each deducts 10
-        assert score == -10 * limit
-        assert attempt == limit  # we hit the limit
+            final_outcome, _ = check_guess(1, 100)  # always "Too Low"
+        score = update_score(final_outcome, limit, limit)
+        assert score == 0
+        assert attempt == limit
 
     def test_full_game_win_easy(self):
         """Simulate a single-guess win on Easy."""
