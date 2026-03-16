@@ -64,3 +64,39 @@ I think I should give more specific or detailed prompt instead of just expecting
 
 - In one or two sentences, describe how this project changed the way you think about AI generated code.
 This project made me realize that AI can be a powerful tool for debugging and testing, but it's important to provide clear and specific instructions to get the desired results.
+
+## 6. Optional Extensions
+
+- Challenge 5: AI model Comparison:
+I have done with what I am debuging for this task so I ask Claude and Codex to see the whole code base and fine me the bugs that still exists and here are the findings they give:
+
+Claude:
+Bug #1 — Off-by-One in Temperature Range Calculation
+logic_utils.py:63 | Severity: Medium
+game_range = high - low should be high - low + 1 to correctly represent an inclusive range.
+Easy (1–20): uses 19 instead of 20
+Normal (1–100): uses 99 instead of 100
+Hard (1–50): uses 49 instead of 50
+This skews the temperature hint labels (e.g. "🧊 Freezing" vs "❄️ Cold") by a small margin.
+Note: The test suite works around this by passing (1, 101) as the range, so all tests pass despite the bug in production.
+Bug #2 — Progress Bar Shows Wrong Number of Squares After Game Over
+app.py:147-148 | Severity: Low
+When attempts_left goes negative (game over), the black square count becomes attempt_limit - attempts_left, which is larger than attempt_limit. For example: 6 - (-1) = 7 squares instead of 6.
+Fix: clamp attempts_left to max(attempts_left, 0) before using it in the progress text.
+Bug #3 — Incomplete TypeError Handling in check_guess
+logic_utils.py:44-55 | Severity: Medium
+The except TypeError handler converts guess to a string but still compares it to secret (an int), which raises TypeError again. The secret value also needs to be converted to str(secret) before comparing.
+Note: Rarely triggered in practice since parse_guess() validates input before calling check_guess().
+
+And here is the finding from Codex:
+High: Invalid input still consumes an attempt in the app flow. st.session_state.attempts is incremented before parse_guess(raw_guess) succeeds, so empty, whitespace, or non-numeric submissions burn turns and can end the game without a real guess. See app.py (line 95) and app.py (line 98).
+
+Medium: The game accepts guesses outside the advertised difficulty range as valid moves. There is no bounds check after parsing, so 1000 is accepted on Easy and recorded in history even though the UI says “Guess a number between low and high.” That creates inconsistent rules and misleading feedback. See logic_utils.py (line 12) and app.py (line 103).
+
+Medium: The documented pytest workflow is broken in this repo as checked out here. README tells the user to run pytest, but pytest -q fails with ModuleNotFoundError: No module named 'logic_utils'; only python -m pytest succeeds. That’s a real setup defect because the advertised test command is not reliable. See README.md (line 22).
+
+Low: check_guess() has a fallback path that compares strings lexicographically after a TypeError, which can return wrong results for multi-digit values. Example: check_guess(9, "10") would treat "9" > "10" and report “Too High”, which is numerically wrong. The current app passes ints, so this is latent, but the utility itself is incorrect for mixed types. See logic_utils.py (line 44).
+
+---
+To show the comparison I dont make any changes or debug my code to see if their findings are correct or not. Claude is what I used for whole assignment so it give something that I am keeping track of and codex on the other hand give some logic bugs that I havent notice before. It is good to have different models came to to see the code and find bug and list out all bugs from different models and solve the common one first and go to the other. It would be my future approach to AI integrated bug finding.
+
